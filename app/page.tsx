@@ -1,89 +1,93 @@
 "use client";
-import React, { useState } from "react";
+import React, { useCallback, useState } from "react";
 
 import { useRouter } from "next/navigation";
 import useStore from "../store";
 
-export default function Home() {
-  const [recipient, setRecipient] = useState("");
-  const [reason, setReason] = useState("");
-  const [loading, setLoading] = useState<boolean>(false);
-  const router = useRouter();
-  const store = useStore();
-  const setEmail = useStore((state) => state.storeEmail);
+import { useCompletion } from "ai/react";
 
-  const pushMessage = async (e: any) => {
-    setLoading(true);
+export default function Home() {
+  const [text1, setText1] = useState("");
+  const [text2, setText2] = useState("");
+  const store = useStore();
+  const router = useRouter();
+  let { complete, isLoading } = useCompletion({
+    api: "/api/completion",
+  });
+
+  const handleSubmit = async (e: any) => {
     e.preventDefault();
-    try {
-      const res = await fetch("/api/chat", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          recipient,
-          reason,
-        }),
-      });
-      const data = await res.json();
-      if (data) {
-        setEmail(data.content);
-        setLoading(false);
-        router.push("/result");
-      }
-    } catch (error) {
-      console.error("Error fetching data:", error);
+    const res = await complete(text1, { body: { bodyText: text2 } });
+    if (res) {
+      store.storeEmail(res);
+      router.push("/result");
     }
   };
 
   return (
-    <div className="flex justify-center items-center h-screen">
-      <form
-        className="bg-white shadow-md rounded px-8 pt-6 pb-8 mb-4"
-        onSubmit={pushMessage}
-      >
-        <div className="mb-4">
-          <label
-            className="block text-gray-700 text-sm font-bold mb-2"
-            htmlFor="recipient"
-          >
-            To
-          </label>
-          <input
-            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-            id="recipient"
-            type="text"
-            placeholder="To recipient..."
-            value={recipient}
-            onChange={(e: any) => setRecipient(e.target.value)}
-          />
-        </div>
-        <div className="mb-4">
-          <label
-            className="block text-gray-700 text-sm font-bold mb-2"
-            htmlFor="reason"
-          >
-            For
-          </label>
-          <input
-            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-            id="reason"
-            type="text"
-            placeholder="Enter the reason"
-            value={reason}
-            onChange={(e: any) => setReason(e.target.value)}
-          />
-        </div>
-        <div className="flex items-center justify-center">
-          <button
-            className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
-            type="submit"
-          >
-            {loading ? "Generating..." : "Generate Email"}
-          </button>
-        </div>
-      </form>
+    <div className="flex min-h-full flex-1 flex-col justify-center px-6 py-12 lg:px-8">
+      <div className="sm:mx-auto sm:w-full sm:max-w-sm">
+        <img
+          className="mx-auto h-10 w-auto"
+          src="https://tailwindui.com/img/logos/mark.svg?color=indigo&shade=600"
+          alt="Your Company"
+        />
+        <h2 className="mt-10 text-center text-2xl font-bold leading-9 tracking-tight text-gray-900">
+          Generate the Email using AI
+        </h2>
+      </div>
+
+      <div className="mt-10 sm:mx-auto sm:w-full sm:max-w-sm">
+        <form className="space-y-6" onSubmit={handleSubmit}>
+          <div>
+            <label
+              htmlFor="text"
+              className="block text-sm font-medium leading-6 text-gray-900"
+            >
+              To recipient
+            </label>
+            <div className="mt-2">
+              <input
+                id="text"
+                name="text"
+                type="text"
+                value={text1}
+                onChange={(e) => setText1(e.target.value)}
+                className="block w-full rounded-md py-1.5 px-4 text-gray-900 shadow-sm border-2 placeholder:text-gray-400 sm:text-sm sm:leading-6"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label
+              htmlFor="reason"
+              className="block text-sm font-medium leading-6 text-gray-900"
+            >
+              Reason
+            </label>
+            <div className="mt-2">
+              <input
+                id="reason"
+                name="reason"
+                type="reason"
+                value={text2}
+                onChange={(e) => setText2(e.target.value)}
+                className="block w-full rounded-md py-1.5 px-4 text-gray-900 shadow-sm border-2 placeholder:text-gray-400 sm:text-sm sm:leading-6"
+              />
+            </div>
+          </div>
+
+          <div>
+            <button
+              type="submit"
+              onClick={handleSubmit}
+              className="flex w-full justify-center rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-semibold leading-6 text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
+            >
+              {isLoading ? "Generating..." : "Click to Generate"}
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
   );
 }
